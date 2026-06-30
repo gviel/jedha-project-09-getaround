@@ -14,7 +14,7 @@ load_dotenv()
 
 MODEL_PATH     = os.getenv("MODEL_PATH",     "models/getaround_pricing_model.pkl")
 MLFLOW_URI     = os.getenv("MLFLOW_URI",     "https://gviel-mlflow37.hf.space/")
-MODEL_NAME     = os.getenv("MODEL_NAME",     "getaround_pricing_lr")
+MODEL_NAME     = os.getenv("MODEL_NAME",     "getaround_pricing")
 MODEL_ENV      = os.getenv("MODEL_ENV",      "prod")    # prod | staging | test
 MODEL_STATUS   = os.getenv("MODEL_STATUS",   "best")    # best | challenger | worst
 MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", "20"))
