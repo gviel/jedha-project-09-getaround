@@ -1,6 +1,7 @@
 .env
 api/.env
 *.bak
+*.ods
 models/
 !models/README.md
 exports/
@@ -9,3 +10,4 @@ __pycache__/
 trash/
 .claude/
 snapshot_screen_*.png
+
