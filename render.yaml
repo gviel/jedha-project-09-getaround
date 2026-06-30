@@ -1,0 +1,40 @@
+services:
+
+  # ── API FastAPI ─────────────────────────────────────────────────────────────
+  - type: web
+    name: getaround-api
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: MODEL_ENV
+        value: prod
+      - key: MODEL_STATUS
+        value: best
+      - key: MODEL_NAME
+        value: getaround_pricing
+      - key: MLFLOW_URI
+        value: https://gviel-mlflow37.hf.space/
+      - key: AWS_DEFAULT_REGION
+        value: eu-west-3
+      - key: AWS_ACCESS_KEY_ID
+        sync: false     # à saisir dans l'UI Render (secret)
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false     # à saisir dans l'UI Render (secret)
+
+  # ── Dashboard Streamlit ─────────────────────────────────────────────────────
+  - type: web
+    name: getaround-dashboard
+    runtime: docker
+    dockerfilePath: ./dashboard/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: API_URL
+        fromService:
+          name: getaround-api
+          type: web
+          property: host    # injecte automatiquement l'URL HTTPS du service API
+      - key: MAX_BATCH_SIZE
+        value: "20"
