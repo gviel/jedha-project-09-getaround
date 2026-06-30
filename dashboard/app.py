@@ -144,6 +144,11 @@ threshold_mobile = (
     st.sidebar.slider("Seuil Mobile (min)", 0, 720, 60, 10) if include_mobile else 0
 )
 
+st.sidebar.markdown("---")
+penalty_amount = st.sidebar.number_input(
+    "Pénalité par retard bloquant (€)", min_value=0, value=50, step=10
+)
+
 
 # ── Onglets ───────────────────────────────────────────────────────────────────
 
@@ -207,7 +212,10 @@ with tab_delay:
         ca_total    += float(r["ca_total"])
         ca_perdu    += float(r["ca_perdu"])
 
-    pct_resa = impacted / total_ended * 100 if total_ended else 0
+    pct_resa      = impacted / total_ended * 100 if total_ended else 0
+    cout_retard   = ca_perdu / impacted if impacted else 0.0
+    penalites     = impacted * penalty_amount
+    ca_perdu_pen  = ca_perdu + penalites
 
     st.subheader("Impact combiné")
 
@@ -224,6 +232,14 @@ with tab_delay:
     col3.metric("CA estimé total",       f"{ca_total:,.0f} €")
     col4.metric("CA estimé perdu",       f"{ca_perdu:,.0f} €",
                 delta=f"-{pct_resa:.1f}%", delta_color="inverse")
+
+    col5, col6, col7 = st.columns(3)
+    col5.metric("Coût par retard bloquant", f"{cout_retard:,.0f} €")
+    col6.metric("Pénalités",               f"{penalites:,.0f} €",
+                help=f"{impacted} retards × {penalty_amount} €/retard")
+    col7.metric("CA perdu + pénalités",    f"{ca_perdu_pen:,.0f} €",
+                delta=f"-{ca_perdu_pen/ca_total*100:.1f}%" if ca_total else None,
+                delta_color="inverse")
 
     st.caption(
         f"Seuils appliqués — {' · '.join(label_seuils)}  ·  "
