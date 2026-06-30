@@ -325,7 +325,20 @@ with tab_delay:
             p75=lambda x: x.quantile(0.75),
             p90=lambda x: x.quantile(0.90),
         ).round(0).astype(int)
+
+        col = df_late["delay_at_checkout_in_minutes"]
+        global_row = pd.Series({
+            "count": col.count(),
+            "mean":  col.mean(),
+            "std":   col.std(),
+            "p50":   col.quantile(0.50),
+            "p75":   col.quantile(0.75),
+            "p90":   col.quantile(0.90),
+        }, name="global").round(0).astype(int)
+        stats = pd.concat([stats, global_row.to_frame().T])
+
         stats.columns = ["Nb retards", "Moyenne (min)", "Std", "p50 (min)", "p75 (min)", "p90 (min)"]
+        stats.index.name = "checkin_type"
 
         st.markdown(
             "<style>"
