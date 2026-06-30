@@ -1,0 +1,11 @@
+.env
+api/.env
+*.bak
+models/
+!models/README.md
+exports/
+__pycache__/
+.ipynb_checkpoints/
+trash/
+.claude/
+snapshot_screen_*.png
