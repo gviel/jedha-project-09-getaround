@@ -11,4 +11,4 @@ COPY models/ models/
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "gunicorn app:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000}"]
+CMD ["sh", "-c", "gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --timeout 120"]

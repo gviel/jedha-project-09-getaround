@@ -1,5 +1,6 @@
 import os
 import joblib
+import threading
 import pandas as pd
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -21,6 +22,8 @@ MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", "20"))
 
 model = None
 _model_info = ""
+_model_loading = False
+_model_error: str | None = None
 
 
 def load_model():
@@ -28,38 +31,48 @@ def load_model():
     MODEL_ENV=test  → chargement local depuis MODEL_PATH (joblib)
     MODEL_ENV=prod|staging → MLflow client, filtre sur tags env + status
     """
-    global model, _model_info
+    global model, _model_info, _model_loading, _model_error
 
-    if MODEL_ENV == "test":
-        model = joblib.load(MODEL_PATH)
-        _model_info = f"local:{MODEL_PATH}"
-        print(f"Modèle chargé localement : {MODEL_PATH}")
-        return
+    _model_loading = True
+    _model_error = None
+    try:
+        if MODEL_ENV == "test":
+            model = joblib.load(MODEL_PATH)
+            _model_info = f"local:{MODEL_PATH}"
+            print(f"Modèle chargé localement : {MODEL_PATH}")
+            return
 
-    mlflow.set_tracking_uri(MLFLOW_URI)
-    client = MlflowClient()
-    filter_str = (
-        f"name='{MODEL_NAME}'"
-        f" and tags.env = '{MODEL_ENV}'"
-        f" and tags.status = '{MODEL_STATUS}'"
-    )
-    versions = client.search_model_versions(filter_str)
-    if not versions:
-        raise RuntimeError(
-            f"Aucune version de '{MODEL_NAME}' avec les tags "
-            f"env={MODEL_ENV}, status={MODEL_STATUS} sur {MLFLOW_URI}"
+        mlflow.set_tracking_uri(MLFLOW_URI)
+        client = MlflowClient()
+        filter_str = (
+            f"name='{MODEL_NAME}'"
+            f" and tags.env = '{MODEL_ENV}'"
+            f" and tags.status = '{MODEL_STATUS}'"
         )
+        versions = client.search_model_versions(filter_str)
+        if not versions:
+            raise RuntimeError(
+                f"Aucune version de '{MODEL_NAME}' avec les tags "
+                f"env={MODEL_ENV}, status={MODEL_STATUS} sur {MLFLOW_URI}"
+            )
 
-    latest = sorted(versions, key=lambda v: int(v.version), reverse=True)[0]
-    uri = f"models:/{MODEL_NAME}/{latest.version}"
-    model = mlflow.pyfunc.load_model(uri)
-    _model_info = f"{MODEL_NAME} v{latest.version} [env={MODEL_ENV}, status={MODEL_STATUS}]"
-    print(f"Modèle chargé depuis MLflow : {_model_info}")
+        latest = sorted(versions, key=lambda v: int(v.version), reverse=True)[0]
+        uri = f"models:/{MODEL_NAME}/{latest.version}"
+        model = mlflow.pyfunc.load_model(uri)
+        _model_info = f"{MODEL_NAME} v{latest.version} [env={MODEL_ENV}, status={MODEL_STATUS}]"
+        print(f"Modèle chargé depuis MLflow : {_model_info}")
+    except Exception as e:
+        _model_error = str(e)
+        print(f"Erreur chargement modèle : {e}")
+    finally:
+        _model_loading = False
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    load_model()
+    # Chargement en arrière-plan pour ne pas bloquer le démarrage du serveur
+    thread = threading.Thread(target=load_model, daemon=True)
+    thread.start()
     yield
 
 
@@ -195,7 +208,13 @@ class BatchPredictionResponse(BaseModel):
 @app.get("/", tags=["Health"])
 def root():
     """Health check."""
-    return {"status": "ok", "model_loaded": model is not None, "model_info": _model_info}
+    return {
+        "status": "ok",
+        "model_loaded": model is not None,
+        "model_loading": _model_loading,
+        "model_error": _model_error,
+        "model_info": _model_info,
+    }
 
 
 @app.post(
@@ -228,7 +247,8 @@ def predict(vehicle: VehicleFeatures):
     ```
     """
     if model is None:
-        raise HTTPException(status_code=503, detail="Modèle non chargé")
+        detail = f"Modèle en cours de chargement..." if _model_loading else f"Modèle non chargé : {_model_error}"
+        raise HTTPException(status_code=503, detail=detail)
 
     row = pd.DataFrame([vehicle.model_dump(include=set(_FEATURES))])
     price = max(round(float(model.predict(row)[0]), 2), 0.0)
@@ -257,7 +277,8 @@ def predict_batch(request: BatchPredictionRequest):
     Limite configurable via la variable d'environnement `MAX_BATCH_SIZE` (défaut : 20).
     """
     if model is None:
-        raise HTTPException(status_code=503, detail="Modèle non chargé")
+        detail = f"Modèle en cours de chargement..." if _model_loading else f"Modèle non chargé : {_model_error}"
+        raise HTTPException(status_code=503, detail=detail)
 
     if len(request.vehicles) > MAX_BATCH_SIZE:
         raise HTTPException(
