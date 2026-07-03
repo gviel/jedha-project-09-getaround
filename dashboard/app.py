@@ -215,7 +215,7 @@ with tab_delay:
     pct_resa      = impacted / total_ended * 100 if total_ended else 0
     cout_retard   = ca_perdu / impacted if impacted else 0.0
     penalites     = impacted * penalty_amount
-    ca_perdu_pen  = ca_perdu + penalites
+    ca_perdu_pen  = ca_perdu - penalites
 
     st.subheader("Impact combiné")
 
@@ -237,7 +237,7 @@ with tab_delay:
     col5.metric("Coût par retard bloquant", f"{cout_retard:,.0f} €")
     col6.metric("Pénalités",               f"{penalites:,.0f} €",
                 help=f"{impacted} retards × {penalty_amount} €/retard")
-    col7.metric("CA perdu + pénalités",    f"{ca_perdu_pen:,.0f} €",
+    col7.metric("CA perdu — pénalités",    f"{ca_perdu_pen:,.0f} €",
                 delta=f"-{ca_perdu_pen/ca_total*100:.1f}%" if ca_total else None,
                 delta_color="inverse")
 
