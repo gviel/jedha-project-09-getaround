@@ -56,6 +56,7 @@ dans le notebook avec le fichier `get_around_pricing_project.csv`
         - `challenger` : R² intermédiaire (ni meilleur ni pire)
     - **Sélection par l'API** : `MlflowClient.search_model_versions()` filtre sur `name`, `tags.env` et `tags.status` ; parmi les versions retournées, la plus récente (numéro de version le plus élevé) est chargée
     - **Mode test** : si `MODEL_ENV=test`, l'API charge le modèle localement via `joblib` (fichier `MODEL_PATH`) sans contacter MLflow
+    - **Startup non-bloquant** : le chargement du modèle se fait dans un thread daemon (`threading.Thread`) lancé depuis le `lifespan` FastAPI — le serveur ouvre le port immédiatement ; tant que le modèle n'est pas prêt, les endpoints `/predict` et `/predict/batch` renvoient HTTP 503. L'état de chargement est exposé dans `GET /` (`model_loading`, `model_error`)
     - **Variables d'environnement API** (fichier `api/.env`, template dans `api/.env_template`) :
         ```
         MODEL_ENV=prod                          # prod | staging | test
@@ -136,3 +137,72 @@ Le dashboard comporte **deux onglets** :
     MAX_BATCH_SIZE=20                  # taille des paquets pour /predict/batch
     DATA_DIR=data                      # chemin vers les données
     ```
+
+---
+
+## Partie 4 : Déploiement sur Render
+
+### Architecture de déploiement
+
+Deux services Docker déployés via **Blueprint** (`render.yaml`) :
+
+| Service | Image | Port | URL |
+|---|---|---|---|
+| `getaround-api` | `python:3.12-slim` | `$PORT` (défaut 8000) | injecté dans le dashboard |
+| `getaround-dashboard` | `python:3.12-slim` | `$PORT` (défaut 8501) | public |
+
+L'`API_URL` du dashboard est injectée automatiquement via `fromService` dans `render.yaml` — aucune configuration manuelle requise.
+
+### Procédure de déploiement
+
+1. Pousser le repo sur GitHub (`main`)
+2. Sur render.com → **New → Blueprint** → pointer sur `gviel/jedha-project-09-getaround`
+3. Render lit `render.yaml` et crée les deux services automatiquement
+4. Dans l'UI Render → service `getaround-api` → **Environment** :
+   - Ajouter `AWS_ACCESS_KEY_ID` (secret, `sync: false`)
+   - Ajouter `AWS_SECRET_ACCESS_KEY` (secret, `sync: false`)
+   - ⚠️ Ces deux variables **ne figurent pas** dans `render.yaml` (sécurité) — saisie manuelle obligatoire
+
+### Variables d'environnement Render
+
+**Service `getaround-api`** (dans `render.yaml` + UI Render) :
+
+```
+MODEL_ENV=prod
+MODEL_STATUS=best
+MODEL_NAME=getaround_pricing
+MLFLOW_URI=https://gviel-mlflow37.hf.space/
+AWS_DEFAULT_REGION=eu-west-3
+AWS_ACCESS_KEY_ID=<saisie manuelle dans l'UI>
+AWS_SECRET_ACCESS_KEY=<saisie manuelle dans l'UI>
+```
+
+**Service `getaround-dashboard`** (injecté automatiquement) :
+
+```
+API_URL=<URL du service getaround-api via fromService>
+MAX_BATCH_SIZE=20
+DATA_DIR=data
+```
+
+### Contraintes plan gratuit Render
+
+- **Cold start** : après 15 min d'inactivité, le service se met en veille → au premier appel, l'API recharge le modèle depuis MLflow/S3 (délai ~30–60 s)
+- **Pas de disque persistant** : le modèle est rechargé depuis S3 à chaque démarrage (jamais depuis un cache local)
+- **Build context** : le `Dockerfile` de chaque service est buildé depuis la **racine du repo** (pas depuis le sous-dossier) — le `render.yaml` précise `dockerContext: .`
+
+### Dockerfiles
+
+Les deux services utilisent le même pattern :
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY <service>/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY <service>/ .
+COPY data/ data/          # dashboard uniquement (car_id_price_map.csv)
+EXPOSE ${PORT:-8000}
+CMD ["sh", "-c", "...  --port ${PORT:-8000}"]
+```
+
+**API spécifiquement** : gunicorn lancé avec `-w 1 --timeout 120` pour éviter les appels parallèles à MLflow/S3 au démarrage et laisser le temps au thread de chargement de se terminer en cas de cold start.
