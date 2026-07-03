@@ -355,18 +355,18 @@ with tab_delay:
         stats = pd.concat([stats, global_row.to_frame().T])
 
         stats.columns = ["Nb retards", "Moyenne (min)", "Std", "p50 (min)", "p75 (min)", "p90 (min)"]
-        stats.index.name = "checkin_type"
+        stats = stats.reset_index().rename(columns={"checkin_type": "Type"})
 
         st.markdown(
             "<style>"
             ".stats-table th, .stats-table td { text-align: center !important; padding: 6px 14px; }"
             ".stats-table { width: 100%; border-collapse: collapse; font-size: 14px; }"
             ".stats-table thead tr { border-bottom: 2px solid #e0e0e0; }"
-            ".stats-table tbody tr:nth-child(even) { background: #f8f8f8; }"
+            ".stats-table tbody tr:nth-child(even) { background: rgba(128,128,128,0.12); }"
             "</style>",
             unsafe_allow_html=True,
         )
-        st.markdown(stats.to_html(classes="stats-table"), unsafe_allow_html=True)
+        st.markdown(stats.to_html(classes="stats-table", index=False), unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
