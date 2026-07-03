@@ -9,7 +9,8 @@ import streamlit as st
 st.set_page_config(page_title="Getaround — Dashboard", layout="wide")
 
 DATA_DIR       = os.getenv("DATA_DIR",       "data")
-API_URL        = os.getenv("API_URL",        "http://localhost:8000")
+_api_url_raw   = os.getenv("API_URL", "http://localhost:8000")
+API_URL        = _api_url_raw if "://" in _api_url_raw else f"https://{_api_url_raw}.onrender.com"
 MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", "20"))
 
 PRICING_CSV = os.path.join(DATA_DIR, "get_around_pricing_project.csv")

@@ -148,10 +148,10 @@ Deux services Docker déployés via **Blueprint** (`render.yaml`) :
 
 | Service | Image | Port | URL |
 |---|---|---|---|
-| `getaround-api` | `python:3.12-slim` | `$PORT` (défaut 8000) | injecté dans le dashboard |
-| `getaround-dashboard` | `python:3.12-slim` | `$PORT` (défaut 8501) | public |
+| `getaround-api` | `python:3.12-slim` | `$PORT` (défaut 8000) | https://getaround-api-hmuc.onrender.com |
+| `getaround-dashboard` | `python:3.12-slim` | `$PORT` (défaut 8501) | https://getaround-dashboard.onrender.com |
 
-L'`API_URL` du dashboard est injectée automatiquement via `fromService` dans `render.yaml` — aucune configuration manuelle requise.
+L'`API_URL` du dashboard est injectée via `fromService` avec `property: host` (ex : `getaround-api-hmuc`). Le dashboard reconstruit l'URL complète : `https://{host}.onrender.com` si aucun schème n'est présent (valeur brute du Blueprint), ou utilise la valeur telle quelle si elle contient déjà `://` (développement local).
 
 ### Procédure de déploiement
 
@@ -180,7 +180,7 @@ AWS_SECRET_ACCESS_KEY=<saisie manuelle dans l'UI>
 **Service `getaround-dashboard`** (injecté automatiquement) :
 
 ```
-API_URL=<URL du service getaround-api via fromService>
+API_URL=https://getaround-api-hmuc.onrender.com   # construit depuis fromService host
 MAX_BATCH_SIZE=20
 DATA_DIR=data
 ```
