@@ -5,9 +5,10 @@ api/.env
 models/
 !models/README.md
 exports/
+docs/travail/
+
 __pycache__/
 .ipynb_checkpoints/
 trash/
 .claude/
 snapshot_screen_*.png
-
