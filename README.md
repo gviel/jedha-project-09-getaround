@@ -1,6 +1,10 @@
-# Getaround — Pricing ML & Delay Analysis
+# JEDHA Certification RNCP6 CSCD — Bloc 4 : Getaround — Pricing ML & Delay Analysis
 
-**JEDHA Certification RNCP6 CSCD — Bloc 4**
+| | |
+|---|---|
+| Dépôt | https://github.com/gviel/jedha-project-09-getaround |
+| API | https://getaround-api-hmuc.onrender.com |
+| Dashboard | https://getaround-dashboard.onrender.com |
 
 Projet en deux parties : (1) modèle ML pour estimer le prix de location journalier d'un véhicule, (2) analyse des retards de restitution et impact sur le chiffre d'affaires selon le seuil de délai entre réservations.
 
@@ -78,11 +82,18 @@ bash scripts/docker_dashboard.sh        # port 8501
 
 Le fichier `render.yaml` définit les deux services Docker (Blueprint Render).
 
-1. Pousser le repo sur GitHub
+| Service | URL |
+|---|---|
+| API FastAPI | https://getaround-api-hmuc.onrender.com |
+| Dashboard Streamlit | https://getaround-dashboard.onrender.com |
+
+1. Pousser le repo sur GitHub (`main`)
 2. render.com → **New → Blueprint** → pointer sur le repo
 3. Dans l'UI Render → service `getaround-api` → **Environment** : saisir `AWS_ACCESS_KEY_ID` et `AWS_SECRET_ACCESS_KEY`
 
 L'URL de l'API est injectée automatiquement dans le dashboard via `render.yaml`.
+
+> **Note :** plan gratuit — cold start après 15 min d'inactivité (~30–60 s de rechargement du modèle depuis S3).
 
 ---
 
@@ -105,6 +116,7 @@ L'URL de l'API est injectée automatiquement dans le dashboard via `render.yaml`
 |---|---|---|
 | `API_URL` | `http://localhost:8000` | URL de l'API FastAPI |
 | `MAX_BATCH_SIZE` | `20` | Taille des lots pour `/predict/batch` |
+| `DATA_DIR` | `data` | Chemin vers les fichiers de données |
 
 ---
 

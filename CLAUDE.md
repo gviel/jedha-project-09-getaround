@@ -69,7 +69,12 @@ bash scripts/docker_dashboard.sh 8502   # port personnalisé
 ```
 
 ### Déploiement prod sur Render
-1. Pousser le repo sur GitHub
+
+URLs de production :
+- API : https://getaround-api-hmuc.onrender.com
+- Dashboard : https://getaround-dashboard.onrender.com
+
+1. Pousser le repo sur GitHub (`main`)
 2. render.com → **New → Blueprint** → pointer sur le repo → Render lit `render.yaml`
 3. Dans l'UI Render → service `getaround-api` → **Environment** :
    - Saisir `AWS_ACCESS_KEY_ID` et `AWS_SECRET_ACCESS_KEY` (variables secrètes)
