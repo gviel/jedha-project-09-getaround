@@ -16,6 +16,10 @@ services:
         value: getaround_pricing
       - key: MLFLOW_URI
         value: https://gviel-mlflow37.hf.space/
+      - key: MLFLOW_TRACKING_USERNAME  # compte MLflow en lecture seule
+        value: reader
+      - key: MLFLOW_TRACKING_PASSWORD
+        sync: false     # à saisir dans l'UI Render (secret)
       - key: AWS_DEFAULT_REGION
         value: eu-west-3
       - key: AWS_ACCESS_KEY_ID
