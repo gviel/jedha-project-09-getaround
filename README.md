@@ -107,6 +107,8 @@ L'URL de l'API est injectée automatiquement dans le dashboard via `render.yaml`
 | `MODEL_STATUS` | `best` | Tag MLflow à cibler |
 | `MODEL_NAME` | `getaround_pricing` | Nom du modèle dans le registre |
 | `MLFLOW_URI` | `https://…` | URL du serveur MLflow |
+| `MLFLOW_TRACKING_USERNAME` | `reader` | Compte MLflow en lecture seule (le serveur exige une authentification) |
+| `MLFLOW_TRACKING_PASSWORD` | — | Mot de passe du compte `reader` (secret, jamais commité ; sur Render : variable d'environnement) |
 | `AWS_ACCESS_KEY_ID` | — | Accès au store S3 (mode prod) |
 | `AWS_SECRET_ACCESS_KEY` | — | Accès au store S3 (mode prod) |
 
@@ -124,5 +126,7 @@ L'URL de l'API est injectée automatiquement dans le dashboard via `render.yaml`
 
 Serveur distant : <https://huggingface.co/spaces/gviel/mlflow37>  
 Client requis : `mlflow==3.7.0`
+
+Le serveur MLflow est protégé par une authentification HTTP basic (compte `reader` en lecture seule, compte `admin` pour écrire). Le client MLflow lit `MLFLOW_TRACKING_USERNAME` et `MLFLOW_TRACKING_PASSWORD` dans l'environnement : aucun changement de code. Sans ces variables, toute requête reçoit un 401. Sur Render, le mot de passe se saisit dans le dashboard (`sync: false` dans `render.yaml`) ; le modèle ne se charge qu'au démarrage, donc un Manual Deploy est nécessaire après tout changement.
 
 Les modèles sont taggés `env=prod` et `status=best|challenger|worst` (calculé automatiquement à l'entraînement).
